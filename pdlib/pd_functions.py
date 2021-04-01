@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sat Mar 13 13:45:56 2021
-
-@author: OwGhimSiong
+Contains wrapper functions for pandas classes.
 """
 
 import pandas as pd
@@ -12,6 +10,7 @@ import datetime as dt
 import time
 import os
 from collections import OrderedDict
+from pyeasylib.base import pretty_list
 
 # Initialise logger
 logger = logging.getLogger()
@@ -66,7 +65,6 @@ def assert_unique_series_mapping(
         
         return series
     
-    
 def get_key_to_values(
     df, key_column, value_column,
     assert_one_to_one = True,
@@ -97,13 +95,40 @@ def get_key_to_values(
     
     return key_to_value_series
 
-
-def get_table_from_df(df0, expected_header_columns,
-                      return_only_expected_header = False):
+def get_main_table_from_df(df0, expected_header_columns,
+                           return_only_expected_header_columns = False):
     '''
-    Extract a table properly.
-    '''
+    Extract a main data table from the raw data loaded as dataframe.
     
+    For example, this is used when the data contains multiple header
+    rows that are not part of the main table.
+
+    Parameters
+    ----------
+    df0 : DATAFRAME
+        The data to be filtered.
+    
+    expected_header_columns : LIST
+        This specifies the header columns of the header. This row is
+        considered the header and subsequent rows will be set as the
+        data row.
+    
+    return_only_expected_header_columns : BOOLEAN, (default False)
+        If set to True, the output will only contains the columns
+        specified in expected_header_columns.
+        
+    Raises
+    ------
+    Exception
+        DESCRIPTION.
+
+    Returns
+    -------
+    df : DATAFRAME
+        Dataframe of the extracted data
+    '''
+
+    # Take the unique set of the headers.
     expected_header_set = set(expected_header_columns)
     
     # Find the header row
@@ -135,13 +160,76 @@ def get_table_from_df(df0, expected_header_columns,
     df = df.dropna(subset = expected_header_columns, how='all')
 
     # keep only required columns
-    if return_only_expected_header:
+    if return_only_expected_header_columns:
         df = df[expected_header_columns]
         
     return df
 
+def series_to_duplicates(s, **kwargs):
+    '''
+    quick function to extract the duplicated data from
+    a series input.
 
-     
+    input:
+        s - series, list, tuple or array etc.
+        kwargs - arguments to prettyList
+                 - max_ends: default 10,
+                 - linker  : default '...'
+                 - sep     : ','
+                 - last    : 'and'
+
+    returns:
+        tuple of (num_duplicates, series of duplicates, dup_str)
+    '''
+
+    s = pd.Series(list(s))                            
+    counts = s.value_counts(dropna=False)
+    dup_counts = counts[counts>1]
+
+    num_dups = len(dup_counts)
+
+    # get parameters
+    dup_str = series_to_count_string(dup_counts, **kwargs)
+    final = "Number with count>1: %s - %s." % (num_dups, dup_str)
+
+    return num_dups, dup_counts, final
+
+def series_to_count_string(s, **kwargs):
+    '''
+    Takes in a series, and return a string of counts where
+    such as index1(x4), index2(x5).
+
+    Note: This function does not count the number of values, i.e.
+          does not do .value_counts().
+          This function will just list the index and the value associated
+          with that index.
+          Expected to be used if the series is already a series of counts.
+
+    **kwargs are passed to prettyList.
+    '''
+
+    #added try/except block to take into account unexpected
+    #data types
+    try:
+        data_list = ["%s(x%s)" % i for i in s.items()]
+    except AttributeError as e:
+        error = "%s. Input s is type=%s but must be pd.Series." % \
+            (e, type(s))
+        raise AttributeError(error)
+
+    # get parameters
+    max_ends = kwargs.get('max_ends', 10)
+    linker = kwargs.get('linker', '...')
+    sep = kwargs.get('sep', ', ')
+    last = kwargs.get('last', 'and')
+    count_string = pretty_list(data_list,
+                               max_ends=max_ends,
+                               linker=linker,
+                               sep=sep,
+                               last=last)
+    return count_string
+
+
 if __name__ == "__main__":
     
     

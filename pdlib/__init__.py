@@ -1,1 +1,1 @@
-from easylib.pdlib.pd_functions import *
+from pyeasylib.pdlib.pd_functions import *

@@ -1,5 +1,7 @@
 """
 Contains useful functions.
+
+New
 """
 
 # Import packages from standard libraries

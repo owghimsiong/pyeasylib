@@ -502,7 +502,51 @@ def pretty_list(
     # return
     return outputstr
 
-
+def ensure_list_type(data, required_type = list):
+    '''
+    Convert the data to the required data type if it is not that.
+    
+    Useful when a list input is required but instead, a variable
+    is provided.
+    
+    Usage:
+        >>> ensure_list_type(1)
+        [1]
+        >>> ensure_list_type([1,2])
+        [1, 2]
+        >>> ensure_list_type([1,2], tuple)
+        (1, 2)
+    '''
+    
+    data_type = type(data)
+    possible_list_types = [list, tuple, np.array]
+    
+    # Check required type
+    if required_type not in possible_list_types:
+        err = (
+            f"Invalid required_type = {data_type}. "
+            f"Should be one of {possible_list_types}."
+            )
+        logger.error(err)
+        raise Exception (err)
+    
+    # univariable types
+    univariable_types = list(NUMERICTYPES) + [str]
+    
+    # convert
+    if data_type in possible_list_types:
+        converted = required_type(data)
+    elif data_type in univariable_types:
+        converted = required_type([data])
+    else:
+        logger.error("Not implemented")
+        raise NotImplementedError( "Not implemented" )
+        
+    # Return
+    return converted
+    
+    
+    
 if __name__ == "__main__":
     
     

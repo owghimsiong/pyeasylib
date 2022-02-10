@@ -268,6 +268,9 @@ def get_filepaths_for_folder(input_folder,
         a list of filepaths                   
     '''
     
+    # Convert valid extensions
+    valid_extensions = ensure_list_type(valid_extensions, required_type = list)
+    
     # normalise the valid extensions to lower case and add a dot in front
     valid_extensions = [i.lower() for i in valid_extensions]
     valid_extensions = [i if i.startswith(".") else ".%s" % i
@@ -545,7 +548,16 @@ def ensure_list_type(data, required_type = list):
     # Return
     return converted
     
-    
+def strip_if_possible(v):
+    '''
+    Strip empty spaces, new line from a string.
+    '''
+    try:
+        #20220210 - removed _x000d_ to ''
+        #           some data from databases have _x000d_ as the newline.
+        return v.strip().replace('_x000d_', '').replace('_x000D_', '')
+    except AttributeError:
+        return v
     
 if __name__ == "__main__":
     

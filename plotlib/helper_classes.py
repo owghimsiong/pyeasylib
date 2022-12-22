@@ -5,7 +5,7 @@ Helper classes for initialising figure object and fontset for plotting.
 '''
 
 
-from misc_fns import *
+from pyeasylib.plotlib.misc_fns import *
 from collections import OrderedDict
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec

@@ -2,7 +2,11 @@ import pandas as pd
 import dateutil
 import calendar
 import numpy as np
+import logging
 
+# Set logger
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 # CALENDAR ABBR TO MONTH
 month_abbr_to_number = {

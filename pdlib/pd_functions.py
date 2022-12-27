@@ -230,6 +230,34 @@ def series_to_count_string(s, **kwargs):
     return count_string
 
 
+def validate_columns_exist(df, columns, optional = False):
+    '''
+    Check if columns are present in the input dataframe.
+    
+    If optional is set to True, columns that are set to None will 
+    be excluded from the checks.
+    '''
+    
+    # filtered columns
+    if optional:
+        columns = [c for c in columns if c is not None]
+    
+    # check if exists
+    not_found = [c for c in columns if c not in df.columns]
+    
+    # raise error
+    if len(not_found) > 0:
+        
+        # format error msg
+        err = (
+            f"Columns(s) not found: {not_found}."
+            "\n\n"
+            f"{df.head().__repr__()}"
+            )
+        
+        # raise
+        raise LookupError (err)
+
 if __name__ == "__main__":
     
     

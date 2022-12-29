@@ -8,10 +8,12 @@ Wrapper functions for the openpyxl library.
 # Import dependencies from py standard libs
 import re
 
+import pandas as pd
+
 # Import dependencies from openpyxl
 import openpyxl
 from openpyxl.styles import PatternFill, Border, Side, Alignment, Protection, Font
-
+utils = openpyxl.utils
 
 # Start of class
 
@@ -165,8 +167,77 @@ def format_cell_to_2_decimals_or_dash(cell):
     
     cell.number_format = '0.00;-0.00;"-";@'
         
+def convert_df_to_excel_rows_cols(df0):
+    '''
+    assume df0 index and columns starts from 0.
+    '''
     
+    def __check_0_start_and_contiguous__(index):
+        
+        # check 0
+        if index[0] != 0:
+            raise Exception (
+                f"df index/columns does not start from 0: {index}"
+                )
+        
+        # Check contiguous
+        expected_vals = range(index.shape[0])
+        if list(expected_vals) != index.values.tolist():
+            raise Exception (
+                f"df index/columns does not have contiguous range: {index}"
+                )
+
+    # Check
+    __check_0_start_and_contiguous__(df0.index)
+    __check_0_start_and_contiguous__(df0.columns)
+    
+    # COnvert
+    df = df0.copy()
+    
+    # Update to xl rows and cols    
+    df.index = df.index + 1
+    df.index.name = "ExcelRow"
+
+    df.columns = (df.columns + 1).map(utils.get_column_letter)
+    df.columns.name = "ExcelCol"
+    
+    return df    
+    
+
+def read_excel_with_xl_rows_cols(fp, sheet_name = 0):
+    '''
+    Read Excel sheets but force rows and cols to Excel alphanum.
+    '''
+    
+    data = pd.read_excel(
+        fp, 
+        sheet_name = sheet_name,
+        index_col = None,   # Hardcoded 
+        header = None,      # Hardcoded
+        skiprows = 0        # Hardcoded
+        )
+    
+    # CHeck type
+    type_data = type(data)
+    if type_data is pd.DataFrame:
+        output = convert_df_to_excel_rows_cols(data) 
+    elif type_data is dict:
+        output = {k: convert_df_to_excel_rows_cols(data[k])
+                  for k in data}
+    else:
+        raise TypeError (
+            f"Unexpected format: {type_data}"
+            )
+    return output
+    
+
 if __name__ == "__main__":
+
+    # Read excel file with excel rows and cols
+    fp = r"D:\Desktop\owgs\CODES\rsmsglib\fifo\aging.xlsx"
+    df = read_excel_with_xl_rows_cols(fp, sheet_name = "Movement")
+
+    
     
     # Testing the class for CellRangeIterator
     if False:

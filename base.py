@@ -39,6 +39,11 @@ INTTYPES = set([
 NUMERICTYPES = FLOATTYPES.union(INTTYPES)
 
 ################## Useful functions ##################
+
+
+
+            
+
 def get_filepaths_for_folder(input_folder, valid_extensions = [],
                              deep = False):
     '''
@@ -558,8 +563,49 @@ def strip_if_possible(v):
         return v.strip().replace('_x000d_', '').replace('_x000D_', '')
     except AttributeError:
         return v
+
+class InputParameters:
+    '''
+    Class to hold all the input paramters.
     
+    For example, we can use it to hold column names.    
+    '''
+    def __init__(self, varname="variable_name", varvalue="value", **cols):
+        
+        # Save summary
+        SUMMARY = pd.Series(cols).to_frame(varvalue)
+        SUMMARY.index.name = varname
+        self.SUMMARY = SUMMARY
+        
+        # Save for each inputs
+        for k, v in cols.items():
+            setattr(self, k, v)
+        
+        #
+        self.varname = varname
+        self.varvalue = varvalue
+        
+    def __repr__(self):
+        
+        header = f"CLASS: {self.__class__}"
+        s = (header + \
+             "\n"
+             f"{'-'*len(header)}"
+             f"\n"
+             f"{self.SUMMARY.__repr__()}"
+             )
+        
+        return s
+            
+    def add(self, **cols):
+        
+        # Save for each inputs
+        for k, v in cols.items():
+            setattr(self, k, v)
+            self.SUMMARY.at[k, self.varvalue] = v
+    
+
 if __name__ == "__main__":
     
-    
-    pass
+    # prettify_bin_labels
+    self = InputParameters(a = 1, b = 2)

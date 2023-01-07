@@ -187,19 +187,20 @@ def convert_df_to_excel_rows_cols(df0):
                 f"df index/columns does not have contiguous range: {index}"
                 )
 
-    # Check
-    __check_0_start_and_contiguous__(df0.index)
-    __check_0_start_and_contiguous__(df0.columns)
-    
-    # COnvert
+    # make a copy to avoid changing the original input
     df = df0.copy()
     
-    # Update to xl rows and cols    
-    df.index = df.index + 1
-    df.index.name = "ExcelRow"
-
-    df.columns = (df.columns + 1).map(utils.get_column_letter)
-    df.columns.name = "ExcelCol"
+    if df.shape[0] > 0:
+            
+        __check_0_start_and_contiguous__(df.index)
+        __check_0_start_and_contiguous__(df.columns)
+        
+        # Update to xl rows and cols    
+        df.index = df.index + 1
+        df.index.name = "ExcelRow"
+    
+        df.columns = (df.columns + 1).map(utils.get_column_letter)
+        df.columns.name = "ExcelCol"
     
     return df    
     
@@ -222,14 +223,56 @@ def read_excel_with_xl_rows_cols(fp, sheet_name = 0):
     if type_data is pd.DataFrame:
         output = convert_df_to_excel_rows_cols(data) 
     elif type_data is dict:
-        output = {k: convert_df_to_excel_rows_cols(data[k])
-                  for k in data}
+        output = {}
+        for sheet, df in data.items():
+            output[sheet] = convert_df_to_excel_rows_cols(df)
     else:
         raise TypeError (
             f"Unexpected format: {type_data}"
             )
     return output
     
+def range_excel_letters(start, stop, include_right=False, step=1):
+    """
+    Get a range of Excel column alphabets from the start and stop 
+    alphabet.
+    
+    If include_right = True, the stop alpha will be included.
+    
+    Usage:
+        > range_excel_letters("A", "C")
+        Out[4]: ['A', 'B']
+        
+        > range_excel_letters("A", "C", True)
+        Out[5]: ['A', 'B', 'C']
+        
+        > range_excel_letters("A", "C", True, 2)
+        Out[6]: ['A', 'C']
+        
+        > range_excel_letters("A", "C", False, 2)
+        Out[7]: ['A']
+    """ 
+    
+    # conditions
+    if not start.isalpha():
+        raise Exception (f"start is not a letter: {start}.")
+        
+    if not stop.isalpha():
+        raise Exception (f"stop is not a letter: {stop}.")
+        
+    # add delta, if include right is True
+    delta = 1 if include_right else 0
+    
+    # start_index
+    start_idx = utils.column_index_from_string(start)
+    stop_idx = utils.column_index_from_string(stop)
+    
+    # Get the data    
+    output_list = []
+    for idx in range(start_idx, stop_idx+delta, step):
+        output_list.append(utils.get_column_letter(idx))
+        
+    return output_list
 
 if __name__ == "__main__":
 

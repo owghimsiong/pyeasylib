@@ -274,6 +274,55 @@ def range_excel_letters(start, stop, include_right=False, step=1):
         
     return output_list
 
+
+def read_ws(ws, drop_na_rows = False, drop_na_cols = False):
+    '''
+    Read data from Excel worksheet into pandas dataframe.
+
+    Parameters
+    ----------
+    ws : openpyxl worksheet
+    drop_na_rows : boolean, optional
+        If True, NA rows will be dropped. The default is False.
+    drop_na_cols : boolean, optional
+        If True, NA cols will be dropped. The default is False.
+
+    Returns
+    -------
+    df
+    '''
+    
+    # Get the boundaries
+    max_column = ws.max_column
+    max_row = ws.max_row
+    
+    # Create the df
+    df = pd.DataFrame(
+        index = pd.Index(range(1, max_row+1), name="ExcelRow"),
+        columns = pd.Index(range(1, max_column+1), name="ExcelCol")
+        )
+    
+    # Loop and fill the values
+    for c in range(1, max_column+1):
+        
+        for r in range(1, max_row+1):
+
+            df.at[r, c] = ws.cell(r, c).value
+            
+    # rename the df.column
+    df.columns = df.columns.map(openpyxl.utils.get_column_letter)
+    
+    # drop NA rows
+    if drop_na_rows:
+        df = df.dropna(how='all')
+    
+    # drop NA cols
+    if drop_na_cols:
+        df = df.dropna(axis=1, how='all')
+    
+    return df
+
+
 if __name__ == "__main__":
 
     # Read excel file with excel rows and cols

@@ -11,6 +11,7 @@ import time
 import os
 from collections import OrderedDict
 from pyeasylib.base import pretty_list
+import pyeasylib.excellib as excellib
 
 # Initialise logger
 logger = logging.getLogger()
@@ -25,6 +26,10 @@ if not(logger.hasHandlers()):
     # Add the logger
     logger.addHandler(stream_handler)
     logger.setLevel(logging.DEBUG)
+
+
+# park some functions from other packages here as well
+read_ws = excellib.read_ws
 
 def assert_unique_series_mapping(
     series, 
@@ -95,6 +100,46 @@ def get_key_to_values(
     
     return key_to_value_series
 
+def get_expected_data_location(df0, expected_data, return_index=False):
+    '''
+    Returns dataframe index where expected data is found.
+    
+    expected_data: list
+    return_index: boolean
+        if True, will return the df index value. 
+        if False (default), will return the df index location
+    '''
+
+    # Take the unique set of the headers.
+    expected_data_set = set(expected_data)
+    
+    # Find the header row
+    data_idx = None
+    for i in range(df0.shape[0]):
+        
+        values = df0.iloc[i]
+        intersection = expected_data_set.intersection(values)
+        if intersection == expected_data_set:
+            
+            data_idx = i
+            break
+    
+    # Raise error if cannot find header row
+    if data_idx is None:
+        error = (
+            "Unable to identify data row in file. "
+            f"Data row must contain the following values: {expected_data_set}."
+            )
+        logger.error(error)
+        raise Exception (error)
+        
+    if return_index:
+        return df0.index[data_idx]
+    
+    else:     
+        return data_idx
+    
+
 def get_main_table_from_df(df0, expected_header_columns,
                            return_only_expected_header_columns = False):
     '''
@@ -128,28 +173,9 @@ def get_main_table_from_df(df0, expected_header_columns,
         Dataframe of the extracted data
     '''
 
-    # Take the unique set of the headers.
-    expected_header_set = set(expected_header_columns)
-    
-    # Find the header row
-    header_idx = None
-    for i in range(df0.shape[0]):
-        
-        values = df0.iloc[i]
-        intersection = expected_header_set.intersection(values)
-        if intersection == expected_header_set:
-            
-            header_idx = i
-            break
-    
-    # Raise error if cannot find header row
-    if header_idx is None:
-        error = (
-            "Unable to identify header row in file. "
-            f"Header must contain the following columns: {expected_header_columns}."
-            )
-        logger.error(error)
-        raise Exception (error)
+    # Get header idx
+    header_idx = get_expected_data_location(
+        df0, expected_header_columns, return_index = False)
     
     # Set the dataframe
     df = df0.iloc[(header_idx+1):]
@@ -258,7 +284,7 @@ def validate_columns_exist(df, columns, optional = False):
         # raise
         raise LookupError (err)
 
-if __name__ == "__main__":
     
+if __name__ == "__main__":
     
     pass

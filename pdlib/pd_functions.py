@@ -100,7 +100,7 @@ def get_key_to_values(
     
     return key_to_value_series
 
-def get_expected_data_location(df0, expected_data, return_index=False):
+def get_expected_data_row(df0, expected_data, return_index=False):
     '''
     Returns dataframe index where expected data is found.
     
@@ -138,7 +138,6 @@ def get_expected_data_location(df0, expected_data, return_index=False):
     
     else:     
         return data_idx
-    
 
 def get_main_table_from_df(df0, expected_header_columns,
                            return_only_expected_header_columns = False):
@@ -174,7 +173,7 @@ def get_main_table_from_df(df0, expected_header_columns,
     '''
 
     # Get header idx
-    header_idx = get_expected_data_location(
+    header_idx = get_expected_data_row(
         df0, expected_header_columns, return_index = False)
     
     # Set the dataframe

@@ -10,6 +10,8 @@ import re
 
 import pandas as pd
 
+from copy import copy
+
 # Import dependencies from openpyxl
 import openpyxl
 from openpyxl.styles import PatternFill, Border, Side, Alignment, Protection, Font
@@ -323,14 +325,104 @@ def read_ws(ws, drop_na_rows = False, drop_na_cols = False):
     return df
 
 
+def copy_worksheet(source_ws, target_wb, new_ws_title=None):
+    '''
+    Copy a worksheet to a separate target workbook.
+    
+    This method was written, as it appears that there is no existing
+    method/class to do so when we want to copy to a separate workbook.
+
+    Parameters
+    ----------
+    source_ws : openpyxl worksheet
+    target_wb : openpyxl workbook
+    '''    
+    
+    if source_ws.parent == target_wb:
+        
+        # if the ws's wb and the target wb is the same, there
+        # is already a way to do so using inbuilt method.
+        target_ws = target_wb.copy_worksheet(source_ws)   
+        
+    else:
+        # Title of the source ws
+        source_title = source_ws.title
+        
+        # Create a new sheet in the target wb
+        target_ws = target_wb.create_sheet(source_title+"new")
+        
+        # Now, will loop through
+        source_df = read_ws(source_ws, drop_na_rows=True, drop_na_cols=True)
+        
+        # format attributes
+        #for some reason, if we add 'style', it will reset all the formatting
+        attrnames = ["value", "font", "fill", "number_format", "alignment",
+                     "border", "comment", "hyperlink", "number_format",
+                     "protection"] 
+        
+        # Now we loop through each of the source data and push it to the target
+        for c in source_df.columns:
+            
+            for r in source_df.index:
+                
+                # Get the source cell
+                loc = f"{c}{r}"
+                source = source_ws[loc]
+                        
+                # Copy all the attributes            
+                for attrname in attrnames:
+                    attr = getattr(source, attrname)
+                    setattr(target_ws[loc], attrname, copy(attr))
+        
+        # adjust column width
+        for c in source_df.columns:
+            target_ws.column_dimensions[c].width = source_ws.column_dimensions[c].width
+         
+        # adjust row height
+        for r in source_df.index:
+            target_ws.row_dimensions[r].height = source_ws.row_dimensions[r].height
+            
+        # Identifying merged cells in the source worksheet
+        merged_cell_ranges = source_ws.merged_cells.ranges
+        
+        # Loop through the merged cell coords and apply to target ws
+        for merged_cell_range in merged_cell_ranges:
+            
+            # Get the coord location
+            coord = merged_cell_range.coord #e.g. F9:F11
+            
+            # merge in the target ws
+            target_ws.merge_cells(coord)
+    
+    # rename the sheetname if required
+    if new_ws_title is not None:
+        
+        target_ws.title = new_ws_title
+        
+    # Return
+    return target_wb
+
+
 if __name__ == "__main__":
-
-    # Read excel file with excel rows and cols
-    fp = r"D:\Desktop\owgs\CODES\rsmsglib\fifo\aging.xlsx"
-    df = read_excel_with_xl_rows_cols(fp, sheet_name = "Movement")
-
     
-    
+    # TESTER for copy_worksheet
+    if False:
+        # Test copy worksheet
+        fp1 = r"./test/file1.xlsx"
+        source_wb = openpyxl.open(fp1)
+        source_ws = source_wb["Data1"]
+        
+        fp2 = r"./test/file2.xlsx"
+        target_wb = openpyxl.open(fp2)
+        
+        # Copy
+        copy_worksheet(source_ws, target_wb, 'newname')
+        
+        # Save
+        savefp = "./test/sample_out.xlsx"
+        target_wb.save(savefp)
+        print (f"Saved to {savefp}.")
+        
     # Testing the class for CellRangeIterator
     if False:
         

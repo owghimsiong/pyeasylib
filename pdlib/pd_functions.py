@@ -100,14 +100,14 @@ def get_key_to_values(
     
     return key_to_value_series
 
-def get_expected_data_row(df0, expected_data, return_index=False):
+def get_expected_data_row(df0, expected_data, return_index=True):
     '''
     Returns dataframe index where expected data is found.
     
     expected_data: list
     return_index: boolean
-        if True, will return the df index value. 
-        if False (default), will return the df index location
+        if True (default), will return the df index value. 
+        if False, will return the df index location
     '''
 
     # Take the unique set of the headers.
@@ -139,6 +139,8 @@ def get_expected_data_row(df0, expected_data, return_index=False):
     else:     
         return data_idx
 
+
+    
 def get_main_table_from_df(df0, expected_header_columns,
                            return_only_expected_header_columns = False):
     '''
@@ -189,6 +191,41 @@ def get_main_table_from_df(df0, expected_header_columns,
         df = df[expected_header_columns]
         
     return df
+
+def get_value_locations(df0, value, return_index=True):
+    '''
+    return_index: boolean
+        if True, will return the df index value. 
+        if False (default), will return the df index location
+    
+    Returns a list of tuple locations.
+    '''
+    # Make a copy
+    df0 = df0.copy()
+    
+    #
+    if not return_index:
+        # then will return the iloc index.
+        # so reset the index first.
+        df0.index = range(df0.shape[0])
+        df0.columns = range(df0.shape[1])
+    
+    else:
+        
+        # should raise a simple warning, if the index is not unique
+        #assert df0.index.is_unique, "Index is not unique."
+        #assert df0.columns.is_unique, "Column is not unique."
+        #Decided not to raise as duplicates should be treated before
+        # or after this function instead.
+        
+        pass
+        
+    # Stack, Match and return    
+    matched = df0.stack() == value
+    matched_data = matched[matched]
+    matched_locations = matched_data.index.tolist()
+    
+    return (matched_locations)
 
 def series_to_duplicates(s, **kwargs):
     '''
@@ -286,4 +323,8 @@ def validate_columns_exist(df, columns, optional = False):
     
 if __name__ == "__main__":
     
-    pass
+    # TESTER for get_value_location
+    df0 = pd.DataFrame(
+        [[1,2,3], [4,4, 6], [6,3,1]],
+        index = [0,1,2],
+        columns = [0,1,2])

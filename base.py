@@ -9,6 +9,7 @@ import logging
 import datetime as dt
 import time
 import os
+import re
 from collections import OrderedDict
 
 # Initialise logger
@@ -564,6 +565,13 @@ def strip_if_possible(v):
     except AttributeError:
         return v
 
+def natural_sort(l): 
+    #Source: https://stackoverflow.com/questions/4836710/is-there-a-built-in-function-for-string-natural-sort
+    convert = lambda text: int(text) if text.isdigit() else text.lower()
+    alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
+    return sorted(l, key=alphanum_key)
+    
+
 class InputParameters:
     '''
     Class to hold all the input paramters.
@@ -605,6 +613,7 @@ class InputParameters:
             self.SUMMARY.at[k, self.varvalue] = v
     
 
+    
 if __name__ == "__main__":
     
     # prettify_bin_labels

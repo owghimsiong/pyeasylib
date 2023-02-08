@@ -336,6 +336,9 @@ def copy_worksheet(source_ws, target_wb, new_ws_title=None):
     ----------
     source_ws : openpyxl worksheet
     target_wb : openpyxl workbook
+    
+    Returns:
+        - target_ws (after copied)
     '''    
     
     if source_ws.parent == target_wb:
@@ -400,7 +403,7 @@ def copy_worksheet(source_ws, target_wb, new_ws_title=None):
         target_ws.title = new_ws_title
         
     # Return
-    return target_wb
+    return target_ws
 
 
 if __name__ == "__main__":

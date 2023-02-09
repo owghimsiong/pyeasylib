@@ -100,7 +100,7 @@ def get_key_to_values(
     
     return key_to_value_series
 
-def get_expected_data_row(df0, expected_data, return_index=True):
+def get_expected_data_row_locations(df0, expected_data, return_index=True):
     '''
     Returns dataframe index where expected data is found.
     
@@ -108,10 +108,15 @@ def get_expected_data_row(df0, expected_data, return_index=True):
     return_index: boolean
         if True (default), will return the df index value. 
         if False, will return the df index location
+        
+    Return a list of rows indices that matches the expected data.
     '''
 
     # Take the unique set of the headers.
     expected_data_set = set(expected_data)
+    
+    # Output
+    iloc_list = []
     
     # Find the header row
     data_idx = None
@@ -121,11 +126,10 @@ def get_expected_data_row(df0, expected_data, return_index=True):
         intersection = expected_data_set.intersection(values)
         if intersection == expected_data_set:
             
-            data_idx = i
-            break
+            iloc_list.append(i)
     
     # Raise error if cannot find header row
-    if data_idx is None:
+    if len(iloc_list) is 0:
         error = (
             "Unable to identify data row in file. "
             f"Data row must contain the following values: {expected_data_set}."
@@ -134,10 +138,10 @@ def get_expected_data_row(df0, expected_data, return_index=True):
         raise Exception (error)
         
     if return_index:
-        return df0.index[data_idx]
+        return df0.index[iloc_list].tolist()
     
     else:     
-        return data_idx
+        return iloc_list
 
 
     
@@ -175,8 +179,8 @@ def get_main_table_from_df(df0, expected_header_columns,
     '''
 
     # Get header idx
-    header_idx = get_expected_data_row(
-        df0, expected_header_columns, return_index = False)
+    header_idx = get_expected_data_row_locations(
+        df0, expected_header_columns, return_index = False)[0] #Get the first match
     
     # Set the dataframe
     df = df0.iloc[(header_idx+1):]

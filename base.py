@@ -41,7 +41,38 @@ NUMERICTYPES = FLOATTYPES.union(INTTYPES)
 
 ################## Useful functions ##################
 
+def compare_two_sets(list1, list2, verbose=True):
+    '''
+    Compare 2 lists.
 
+    Input:
+        list1 - list/set
+        list2 - list/set
+
+    Output:
+        tuple with three elements:
+        1) values in both list
+        2) values in list1 but not in list2
+        3) values in list2 but not in list1
+
+    Usage:
+        >>> compare2sets([1,2,3,4], [3,4,5,6])
+        ([3, 4], [1, 2], [5, 6])
+    '''
+    set1 = set(list1)
+    set2 = set(list2)
+    overlap_set = set1.intersection(set2)
+    not_in_set2 = set1.difference(overlap_set)
+    not_in_set1 = set2.difference(overlap_set)
+    
+    if verbose:
+        log = (
+            f"left_only:{len(not_in_set2)} (common:{len(overlap_set)}) right_only:{len(not_in_set1)}"
+            )
+        print (log)
+        
+    
+    return list(overlap_set), list(not_in_set2), list(not_in_set1)
 
             
 

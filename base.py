@@ -640,6 +640,17 @@ class InputParameters:
         
         # Save for each inputs
         for k, v in cols.items():
+            
+            # raise warning if k alr present and v is not same
+            v0 = getattr(self, k, None)
+            
+            if hasattr(self, k) and (v0 != v):
+                msg = (
+                    f"WARNING: Value for attribute '{k}' already found: "
+                    f"Updated from '{v0}' to '{v}'."
+                    )
+                print (msg)
+            
             setattr(self, k, v)
             self.SUMMARY.at[k, self.varvalue] = v
     

@@ -700,9 +700,10 @@ class ProgressBar:
                 
                 # number of loops remaining
                 num_remain = self.number - count
-                time_remain = num_remain * time_elapsed_per_loop
+                time_remain = round(num_remain * time_elapsed_per_loop, 0)
+                time_remain = str(dt.timedelta(seconds=time_remain))
                 
-                msg += f" [Est. completion in {time_remain:.2g} s]"
+                msg += f" [Est. completion in {time_remain} hr]"
                             
         return msg
     

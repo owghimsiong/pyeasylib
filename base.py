@@ -41,6 +41,10 @@ NUMERICTYPES = FLOATTYPES.union(INTTYPES)
 
 ################## Useful functions ##################
 
+
+
+
+
 def compare_two_sets(list1, list2, verbose=True):
     '''
     Compare 2 lists.
@@ -655,8 +659,71 @@ class InputParameters:
             self.SUMMARY.at[k, self.varvalue] = v
     
 
+
+class ProgressBar:
     
+    def __init__(self, number, bins = 10):
+        
+        # Calculate pct size per bin
+        size = int(100 / bins)
+        
+        # Get the intervals
+        # start from 2, so that we don't have to print 0%
+        pct_intervals = list(range(0, 101, size))
+        
+        #
+        ndigits = len(str(number))
+        
+        # Set the dict
+        count_dict = {}
+        for pct in pct_intervals:
+            count = int(round(pct / 100 * number, 0))
+            count_dict[count] = f"{count:{ndigits}d} of {number} completed: {pct}%"
+        
+        self.count_dict = count_dict
+        self.count_time = {0: time.perf_counter()}
+        self.number = number
+        self.bins = bins
+        
+    def _get_log_message(self, count):
+        
+        msg = self.count_dict.get(count, None)
+        if msg is not None:
+            
+            self.count_time[count] = time.perf_counter()
+            
+            if count != self.number:
+                
+                # time taken so far
+                time_elapsed = self.count_time[count] - self.count_time[0]
+                time_elapsed_per_loop = time_elapsed / (count - 0)
+                
+                # number of loops remaining
+                num_remain = self.number - count
+                time_remain = num_remain * time_elapsed_per_loop
+                
+                msg += f" [Est. completion in {time_remain:.2g} s]"
+                            
+        return msg
+    
+    def print_log_message(self, count):
+        
+        msg = self._get_log_message(count)
+        if msg is not None:
+            print (msg)
+    
+
+
 if __name__ == "__main__":
     
     # prettify_bin_labels
-    self = InputParameters(a = 1, b = 2)
+    if False:
+        self = InputParameters(a = 1, b = 2)
+        
+    
+    
+    pbar = ProgressBar(100, 10)
+    
+    for i in range(1, 101):
+        time.sleep(0.1)
+        pbar.print_log_message(i)

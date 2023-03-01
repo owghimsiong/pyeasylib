@@ -691,19 +691,24 @@ class ProgressBar:
         if msg is not None:
             
             self.count_time[count] = time.perf_counter()
+
+            # time taken so far
+            time_elapsed = self.count_time[count] - self.count_time[0]
+            time_elapsed_per_loop = time_elapsed / (count - 0)
+            time_elapsed_str = str(dt.timedelta(seconds=round(time_elapsed, 0)))
             
             if count != self.number:
-                
-                # time taken so far
-                time_elapsed = self.count_time[count] - self.count_time[0]
-                time_elapsed_per_loop = time_elapsed / (count - 0)
                 
                 # number of loops remaining
                 num_remain = self.number - count
                 time_remain = round(num_remain * time_elapsed_per_loop, 0)
                 time_remain = str(dt.timedelta(seconds=time_remain))
                 
-                msg += f" [Est. completion in {time_remain} hr]"
+                msg += f" [Elapsed: {time_elapsed_str} hr | Remaining: {time_remain} hr]"
+                
+            else:
+                
+                msg += f" [Elapsed: {time_elapsed_str} hr]"
                             
         return msg
     

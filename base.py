@@ -718,6 +718,51 @@ class ProgressBar:
         if msg is not None:
             print (msg)
     
+    
+class Binner:
+    '''
+    A class that splits data into bins.     
+    '''
+    
+    def __init__(self, data, bins):
+        
+        # Create a df
+        df = pd.DataFrame({"Data": list(data)})
+        df.index = range(1, df.shape[0]+1)
+        
+        # Number per bin
+        num_per_bin = int(np.ceil(df.shape[0] / bins))
+        
+        # Split into bins
+        df["Bin"] = None
+        for bin_num in range(bins):
+            
+            l_idx = bin_num * num_per_bin
+            r_idx = (bin_num+1) * num_per_bin
+            
+            if bin_num > 0:
+                l_idx += 1
+                
+            df.loc[l_idx:r_idx, "Bin"] = bin_num+1
+            
+        gb = df.groupby("Bin")
+        
+        # Save as attrs
+        self.data = data
+        self.bins = bins
+        self.df = df
+        self.gb = gb
+        
+    def get_data_by_bin(self, bin_number):
+        
+        if bin_number not in self.gb:
+            
+            raise Exception (f"Bin={bin_number} not found. "
+                             f"Max={max(self.gb.groups.keys())}")
+        
+        bin_data = self.gb.get_group(bin_number)["Data"].values.tolist()
+        
+        return bin_data
 
 
 if __name__ == "__main__":
@@ -727,9 +772,22 @@ if __name__ == "__main__":
         self = InputParameters(a = 1, b = 2)
         
     
-    
-    pbar = ProgressBar(100, 10)
-    
-    for i in range(1, 101):
-        time.sleep(0.1)
-        pbar.print_log_message(i)
+    # Test ProgressBar
+    if False:
+        
+        pbar = ProgressBar(100, 10)
+        
+        for i in range(1, 101):
+            time.sleep(0.1)
+            pbar.print_log_message(i)
+            
+    # Test binner
+    if True:
+        
+        data = list(range(2))
+        
+        self = Binner(data, 3)
+        
+        print (self.gb.agg("count"))
+        
+            

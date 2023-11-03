@@ -724,18 +724,18 @@ class Binner:
     A class that splits data into bins.     
     '''
     
-    def __init__(self, data, bins):
+    def __init__(self, data, nbins):
         
         # Create a df
         df = pd.DataFrame({"Data": list(data)})
         df.index = range(1, df.shape[0]+1)
         
         # Number per bin
-        num_per_bin = int(np.ceil(df.shape[0] / bins))
+        num_per_bin = int(np.ceil(df.shape[0] / nbins))
         
         # Split into bins
         df["Bin"] = None
-        for bin_num in range(bins):
+        for bin_num in range(nbins):
             
             l_idx = bin_num * num_per_bin
             r_idx = (bin_num+1) * num_per_bin
@@ -749,13 +749,29 @@ class Binner:
         
         # Save as attrs
         self.data = data
-        self.bins = bins
+        self.nbins = nbins
+        self.bins = list(gb.groups.keys())
         self.df = df
         self.gb = gb
         
+    def __repr__(self):
+        
+        header = f"CLASS: {self.__class__.__name__}"
+        s = (header + \
+             "\n"
+             f"{'-'*len(header)}"
+             f"\n"
+             f"Number of data: {self.df.shape[0]}\n"
+             f"Number of bins: input={self.nbins}, actual={len(self.bins)}\n"
+             f"Number of data by bins:\n"
+             f"{self.gb.agg('count')}"
+             )
+            
+        return s
+        
     def get_data_by_bin(self, bin_number):
         
-        if bin_number not in self.gb:
+        if bin_number not in self.gb.groups:
             
             raise Exception (f"Bin={bin_number} not found. "
                              f"Max={max(self.gb.groups.keys())}")
@@ -784,7 +800,7 @@ if __name__ == "__main__":
     # Test binner
     if True:
         
-        data = list(range(2))
+        data = list(range(22))
         
         self = Binner(data, 3)
         

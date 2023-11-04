@@ -80,55 +80,6 @@ def compare_two_sets(list1, list2, verbose=True):
 
             
 
-def get_filepaths_for_folder(input_folder, valid_extensions = [],
-                             deep = False):
-    '''
-    Returns a list of excel filepaths.
-    
-    valid_extensions = a list, or EXTENSIONS_EXCEL
-    
-    if deep = True, will go down into internal folders to extract.
-    '''
-    
-    # normalise the valid extensions to lower case and add a dot in front
-    valid_extensions = [i.lower() for i in valid_extensions]
-    valid_extensions = [i if i.startswith(".") else ".%s" % i
-                        for i in valid_extensions]
-    
-    # Get the dir entries 
-    entries =  os.listdir(input_folder)
-            
-    # Get the files
-    filenames = [f for f in entries 
-                 if os.path.isfile(os.path.join(input_folder, f))]
-    dirnames = [f for f in entries if f not in filenames]
-        
-    # Get only excel files and not folders and skip temp files
-    
-    filenames = [f 
-                 for f in filenames
-                 if (not(f.startswith("~")) and 
-                     os.path.splitext(f)[-1].lower() in valid_extensions)] 
-    
-    # calculate the filepaths
-    filepaths = [os.path.join(input_folder, fn) for fn in filenames]
-    
-    # Get for the folder
-    if deep and len(dirnames) > 0:
-        
-        for dirname in dirnames:
-            dirpath = os.path.join(input_folder, dirname)
-            filepaths2 = get_filepaths_for_folder(
-                dirpath,
-                valid_extensions=valid_extensions,
-                deep = deep)
-            
-            # update
-            filepaths.extend(filepaths2)
-                
-    return sorted(list(set(filepaths)))
-
-
 def create_folder(folderpath,
                   alternate_if_exists = False):
     '''

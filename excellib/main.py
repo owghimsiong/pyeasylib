@@ -376,7 +376,11 @@ def copy_worksheet(source_ws, target_wb, new_ws_title=None):
                 for attrname in attrnames:
                     attr = getattr(source, attrname)
                     setattr(target_ws[loc], attrname, copy(attr))
-        
+                
+        # hide the hidden rows
+        for r in source_df.index:
+            target_ws.row_dimensions[r].hidden = source_ws.row_dimensions[r].hidden
+            
         # adjust column width
         for c in source_df.columns:
             target_ws.column_dimensions[c].width = source_ws.column_dimensions[c].width

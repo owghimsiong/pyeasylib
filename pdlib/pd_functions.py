@@ -129,7 +129,7 @@ def get_expected_data_row_locations(df0, expected_data, return_index=True):
             iloc_list.append(i)
     
     # Raise error if cannot find header row
-    if len(iloc_list) is 0:
+    if len(iloc_list) == 0:
         error = (
             "Unable to identify data row in file. "
             f"Data row must contain the following values: {expected_data_set}."

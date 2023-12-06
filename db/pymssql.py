@@ -6,10 +6,18 @@ from sqlalchemy import create_engine
 from sqlalchemy.engine import URL
 from sqlalchemy.sql import text
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.types import *
-from sqlalchemy.exc import *
+from sqlalchemy.exc import ResourceClosedError
 
-from settings import logger
+# LOGGER
+import logging
+logger = logging.getLogger()
+if not(logger.hasHandlers()):
+    stream_handler = logging.StreamHandler()
+    stream_formatter = logging.Formatter('[%(levelname)s] %(message)s')
+    stream_handler.setFormatter(stream_formatter)
+    stream_handler.setLevel(logging.DEBUG)
+    logger.addHandler(stream_handler)
+    logger.setLevel(logging.DEBUG)
 
 
 class PyMsSQL:
@@ -41,7 +49,7 @@ class PyMsSQL:
 
         username: str
 
-        password: str                    
+        password: str
         '''
 
         # Save as attributes (validation will be performed)
@@ -74,7 +82,8 @@ class PyMsSQL:
         logger.debug("Connecting to database...")
 
         conn_url = URL.create('mssql+pyodbc', query={'odbc_connect': conn_str})
-        engine = create_engine(conn_url)
+        engine = create_engine(conn_url, 
+                               use_setinputsizes=False) ##https://github.com/sqlalchemy/sqlalchemy/issues/8681           
         connection = engine.raw_connection()
         cursor = connection.cursor()
 
@@ -162,101 +171,186 @@ class PyMsSQL:
             raise ValueError(msg)
 
         self._password = value
+        
 
-    # %% METHODS TO READ TABLES FROM SQL
-    def read_sql(self, script: str) -> pd.DataFrame:
+    # %% METHODS TO QUERY THE DB
+    def execute_query(self, script: str) -> pd.DataFrame:
+        '''
+        Sends a query to the SQL engine to:
+            - extract info
+            - update/insert/delete
+            
+        If there is output, a dataframe will be returned.
+        If not, it will return None.        
+        '''
 
         with self.engine.begin() as conn:
-            # executes the statement script to write to the database
+            
+            # executes the statement script
             result = conn.execute(text(script))
 
-            rows = result.fetchall()
-            columns = result.keys()
+            # Depending on the type of query, there will be some or no output
+            # when there is no output, there fetchall will throw an error    
+            has_result = False
+            try:            
+                rows = result.fetchall()
+                has_result = True
+            except ResourceClosedError: #This result object does not return rows. It has been closed automatically.
+                pass
+            
+            # If has result
+            output = None
+            if has_result:
+                    
+                columns = result.keys()
+                df = pd.DataFrame(rows, columns=columns)
+    
+                # if data is empty, warn
+                if df.empty:
+                    # extract the source table name from the script
+                    msg = f"The provided script returns an empty table as an output."
+                    logger.debug(msg)
+                    
+                output = df
+                
+            # log
+            output_str = "no output" if output is None \
+                         else f"output of shape {str(output.shape)}"
+            logger.debug(f"Completed query execution and got {output_str}.")
 
-            df = pd.DataFrame(rows, columns=columns)
-
-            # if data is empty, warn
-            if df.empty:
-                # extract the source table name from the script
-                msg = f"The provided script returns an empty table as an output."
-                logger.debug(msg)
-
-        return df
-
-    def read_sql_full_table(self,
-                            table_name: str,
-                            read_current_only: bool = False,
-                            start_column_name: str = None,
-                            end_column_name: str = None
-                            ) -> pd.DataFrame:
+        return output
+                
+    # %% METHODS TO GET INFO FROM THE DB
+    def get_all_tablenames(self):
         '''
-        Reads the entire contents of a specified table from a database.
+        Get all tablenames from the connected db.
+        
+        Returns a list of tablenames.
+        '''
+        
+        query = (
+            f"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES "
+            f"WHERE TABLE_CATALOG='{self.database}'"
+            )
+                
+        df = self.query_db(query)
+        
+        table_names = df["TABLE_NAME"].values   
+        
+        # when db gets updated with data, this will always be updated
+        self.table_names = table_names
+        
+        return table_names
+    
+    def get_table_column_names(self, table_name):
+        '''
+        Get the column names for a table.
 
         Parameters
         ----------
         table_name : str
-            The name of the table to read from.
-        read_current_only : bool
-            Set to True to read only those rows that are currently active
-        start_column_name : str
-            Start column name to read date information. e.g. start_date
-        end_column_name : str
-            End column name to read date information. e.g. end_date
 
         Returns
         -------
-        df : pd.DataFrame
-            A pandas DataFrame containing the data from the specified
-            table.
+        column_names : list
+            List of all the column names
         '''
-        if read_current_only:
-            if (start_column_name is None) or (start_column_name is None):
-                msg = ("The parameter 'start_column_name' or 'end_column_name' ",
-                       "must be specified to filter the data. ",
-                       "Reading the whole data...")
-                logger.warning(msg)
-
-            else:
-                script = f'''SELECT * FROM {table_name}
-                          WHERE GETDATE() BETWEEN {start_column_name} AND {end_column_name}'''
-
-        else:
-            script = f"SELECT * FROM {table_name}"
-
-        df = self.read_sql(script)
-
-        logger.debug(f"Completed reading the table '{table_name}'.")
-
-        return df
-
-    # %% METHODS TO WRITE TABLES TO SQL
-    def execute_query(self, script: str):
+    
+        query = (
+            f"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS "
+            f"WHERE TABLE_NAME = N'{table_name}'"
+            )
+        
+        df = self.query_db(query)
+        
+        column_names = df["COLUMN_NAME"].values
+        
+        return column_names
+    
+    def count_table_nrows(self, table_name):
+        
+        query = f"SELECT COUNT(*) FROM {table_name}"
+        
+        df = self.execute_query(query)
+        
+        if df.shape != (1,1):
+            err = "Unexpected output dimension."
+            logger.error(err)
+            raise Exception (err)
+        
+        #
+        nrows = df.iat[0,0]
+        
+        return nrows
+    
+    def read_table(self,
+                   table_name    = None,
+                   query         = None,
+                   column_subset = None):
         '''
-        Execute the provided script.
+        Reads a table from the db.
 
         Parameters
         ----------
-        script : str
-            The SQL script to execute for data insertion or update.
-
-        Raises
-        ------
-        Exception
-            If there is an error executing the given script.
+        table_name : str, optional
+            The name of the table to extract data from. 
+            If this is not specified, query must be specified.
+        query : str, optional
+            The sql query to read the table. 
+            If this is not specified, table_name must be specified.
+        column_subset : list, optional
+            Subset of columns to extract. 
+            When it is not specified, the full table will be returned.
+            
+        Returns
+        -------
+        df : dataframe
         '''
+                
+        # Check that only table_name or query is specified
+        # To get the final query
+        if (table_name is None) and (query is None):
+            err = (
+                "Both table_name and query are not specified. "
+                "Please specify either one.")
+            logger.error(err)
+            raise Exception (err)
 
-        logger.debug(f"Executing query \n'{script}'...")
+        elif (table_name is not None) and (query is not None):
+            
+            err = (
+                f"Both table_name ({table_name}) and "
+                f"query ({query}) are specified. "
+                "Please specify either one.")
+            logger.error(err)
+            raise Exception (err)
+        
+        elif table_name is not None:
+            
+            script = f"SELECT * FROM {table_name}"
+            
+        elif query is not None:
+            
+            script = query
+        
+        else:
+            
+            raise Exception ("Unusual situation.")
+        
+        # Query
+        df = self.query_db(script)
+        
+        # FIlter by column subset
+        if column_subset is not None:
+            
+            df = df[column_subset]
+            
+        logger.debug(f"Completed reading the table '{table_name}'.")
 
-        try:
-            with self.engine.begin() as conn:
-                # executes the statement script to write to the database
-                conn.execute(text(script))
+        return df
+    
 
-        except Exception as e:
-            logger.error(e)
-            raise e
-
-        logger.debug(f"Completed query execution.")
+    # %% METHODS TO WRITE TABLES TO SQL
 
     def insert_dataframe(self, table_name: str, df: pd.DataFrame):
         '''
@@ -460,6 +554,29 @@ class PyMsSQL:
 
 # %% FOR TESTING
 if __name__ == "__main__":
-    from settings import CONN_DICT
+    
+
+
+    CONN_DICT = {
+    "driver": "SQL Server",
+    "server": r"U110\SQLDEV",
+    "database": "fruits",
+    }
 
     self = PyMsSQL(**CONN_DICT)
+    
+    self.execute_query('select * from dbo.color$')
+    
+    
+    df = pd.DataFrame([[9, "green", 30],
+                       [10, "purple", 20]], 
+                      index =[0,1], 
+                      columns=["id", "color", 'x'])
+    
+    # Test insert
+    if False:
+
+        self.insert_dataframe('color$', df)
+        
+        # Test delete
+        self.delete('color$', ['id'], df)

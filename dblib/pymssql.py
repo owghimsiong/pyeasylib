@@ -233,7 +233,7 @@ class PyMsSQL:
             f"WHERE TABLE_CATALOG='{self.database}'"
             )
                 
-        df = self.query_db(query)
+        df = self.execute_query(query)
         
         table_names = df["TABLE_NAME"].values   
         
@@ -261,7 +261,7 @@ class PyMsSQL:
             f"WHERE TABLE_NAME = N'{table_name}'"
             )
         
-        df = self.query_db(query)
+        df = self.execute_query(query)
         
         column_names = df["COLUMN_NAME"].values
         
@@ -338,7 +338,7 @@ class PyMsSQL:
             raise Exception ("Unusual situation.")
         
         # Query
-        df = self.query_db(script)
+        df = self.execute_query(script)
         
         # FIlter by column subset
         if column_subset is not None:
@@ -487,7 +487,18 @@ class PyMsSQL:
         except:
             msg = f"Failed to update {table_name}."
             logger.error(msg)
-
+            
+    def delete_table(self, table_name):
+        '''
+        Drop table.
+        '''
+        
+        query = f'DROP TABLE {table_name};'
+        self.execute_query(query)
+        
+        logger.info(f"Deleted table={table_name}.")
+            
+            
     def delete(self, table_name: str, id_cols: list, df: pd.DataFrame):
         '''
         Writes SQL DELETE statements to delete rows from a table based

@@ -541,6 +541,8 @@ class PyMsSQL:
         #   WHERE condition
         #   '''
 
+        # ---------------------------------------------------------------
+        # prepare query 
         query_lst = []
 
         for i in range(len(df)):
@@ -558,12 +560,22 @@ class PyMsSQL:
             query_lst.append(delete_statement)
 
         query = "\n".join(query_lst)
-
+        # ---------------------------------------------------------------
+                
+        # Delete
+        nrow_before_del = self.count_table_nrows(table_name)
+        
         try:
+            
             self.execute_query(query)
-
+            
+            # Count #rows deleted
+            nrow_after_del = self.count_table_nrows(table_name)
+            ndeleted = nrow_before_del - nrow_after_del
+            
+            # Log
             logger.info(
-                f"Successfully deleted {len(query_lst)} rows from {table_name}")
+                f"Successfully deleted {ndeleted} rows from {table_name}.")
 
         except:
             msg = f"Failed to delete rows from {table_name}."

@@ -383,8 +383,15 @@ class PyMsSQL:
         except Exception as e:
             msg = (f"Failed to insert dataframe into {table_name}."
                    f"\n{e}")
+            
+            if str(e) == "__init__() got multiple values for argument 'schema'":
+                msg += "\n\nThis could be due to incompatible versions of SQLAlchemy and pandas."
+                msg += "\nSee also: https://stackoverflow.com/questions/75282511/df-to-table-throw-error-typeerror-init-got-multiple-values-for-argument"
+            
             logger.error(msg)
-            raise Exception(msg)
+            
+            raise Exception(msg) #if  __init__() got multiple values for argument 'schema', version problem
+                                 #https://stackoverflow.com/questions/75282511/df-to-table-throw-error-typeerror-init-got-multiple-values-for-argument
 
         logger.debug(f"Completed dataframe insertion into {table_name}.")
 

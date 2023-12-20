@@ -7,6 +7,7 @@ from sqlalchemy.engine import URL
 from sqlalchemy.sql import text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import ResourceClosedError
+import sql_metadata
 
 # LOGGER
 import logging
@@ -332,6 +333,9 @@ class PyMsSQL:
         elif query is not None:
             
             script = query
+            
+            # Get the table name from the query
+            table_name = ",".join(sql_metadata.Parser(query).tables)
         
         else:
             

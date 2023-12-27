@@ -97,7 +97,7 @@ class PyMsSQL:
         self.engine = engine
         self.cursor = cursor
         self.session = session
-
+        
     @property
     def driver(self) -> str:
         return self._driver
@@ -352,6 +352,34 @@ class PyMsSQL:
         logger.debug(f"Completed reading the table '{table_name}'.")
 
         return df
+    
+    def read_all_tables(self):
+        
+        # Get all the table names
+        table_names = self.get_all_tablenames()
+        
+        # Read all
+        tablename_to_df = {tablename: self.read_table(tablename) for tablename in table_names}
+        
+        return tablename_to_df
+    
+    def export_all_tables(self, output_fp):
+        
+        # Load all the tables
+        tablename_to_df = self.read_all_tables()
+        
+        # Create writer
+        writer = pd.ExcelWriter(output_fp, engine='openpyxl')
+        logger.debug("Writing tables to file={output_fp}.")
+        for tablename, df in tablename_to_df.items():
+            
+            df.to_excel(writer, sheet_name = tablename)
+            logger.debug(f"Table={tablename} written to file.")
+        
+        # Save
+        writer.close()
+        logger.debug(f"All tables saved to {output_fp}.")
+        
     
 
     # %% METHODS TO WRITE TABLES TO SQL

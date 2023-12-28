@@ -612,6 +612,35 @@ class PyMsSQL:
         except:
             msg = f"Failed to delete rows from {table_name}."
             logger.error(msg)
+            
+    def create_table(self, table_name, structure_df):
+        '''
+        Parameters
+        ----------
+        tablename : TYPE
+            DESCRIPTION.
+        structure_df : df with two columns: COLUMN, TYPE.
+            DESCRIPTION.
+        '''
+        
+        # Check that all required columns are present
+        required_columns = ["COLUMN", "TYPE"]
+        missing_columns = set(required_columns).difference(structure_df.columns)
+        if len(missing_columns) > 0:
+            msg = "Missing columns: {missing_columns}."
+            logger.error(msg)
+            raise Exception (msg)
+        
+        # Prepare the script
+        list_of_vartype = [
+            f'"{s.at["COLUMN"]}" {s.at["TYPE"]}'for i, s in structure_df.iterrows()
+            ]
+        vartype_str = ", ".join(list_of_vartype)
+        script = f"CREATE TABLE {table_name} ({vartype_str});"
+        
+        # Execute
+        self.execute_query(script)
+        logger.info(f"Created table={table_name} with {structure_df.shape[0]} columns and 0 rows.")
 
 
 # %% FOR TESTING

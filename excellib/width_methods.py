@@ -13,6 +13,9 @@ class ColumnsWidthAdjuster:
     # https://stackoverflow.com/questions/62505403/using-python-win32com-to-get-list-of-excel-worksheets#:~:text=To%20get%20the%20name%20of%20each%20sheet%2C%20you,each%20sheet%2C%20you%20must%20use%20the%20.Name%20method
     # https://stackoverflow.com/questions/13197574/openpyxl-adjust-column-width-size
     # CHATGPT for docstring
+    
+    #CHANGE LOGS
+    #20230322 - Initialised.
     '''
     
     def __init__(self, excelfp):

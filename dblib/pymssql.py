@@ -646,7 +646,7 @@ class PyMsSQL:
 # %% FOR TESTING
 if __name__ == "__main__":
     
-
+    # Simple test of the class written in this file
 
     CONN_DICT = {
     "driver": "SQL Server",

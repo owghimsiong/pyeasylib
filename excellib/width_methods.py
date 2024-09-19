@@ -27,8 +27,22 @@ class ColumnsWidthAdjuster:
         '''
         
         self.excelfp = excelfp
+
+    def main(self, sheetnames = None, method = None):
+
+        sheetnames = sheetnames
+
+        if method == None:
+
+            self.autofit_win32com(sheetnames)
+
+        elif method == 'openpyxl':
+
+            self.autofit_openpyxl(sheetnames)
+
+
     
-    def main(self, sheetnames=None):
+    def autofit_win32com(self, sheetnames=None):
         '''
         Performs autofit operations on the specified sheets of the Excel file.
 
@@ -44,12 +58,19 @@ class ColumnsWidthAdjuster:
         try:
             excel = Dispatch('Excel.Application')
             excel.Visible = False  # Set Excel to run in the background
+            excel.DisplayAlerts = False
             
             # win 32 only works with absolute path
             self.excelfp_abs = os.path.abspath(self.excelfp)
             
             print(f"Opening Excel file: {self.excelfp_abs}...")
-            wb = excel.Workbooks.Open(self.excelfp_abs)
+
+            try:
+                wb = excel.Workbooks.Open(self.excelfp_abs)
+
+            except Exception as e:
+                print(e)
+                
             
             if isinstance(sheetnames, list):
                 sn_list = sheetnames
@@ -68,25 +89,81 @@ class ColumnsWidthAdjuster:
                 except Exception as e:
                     print(f"Error while processing sheet '{sheetname}': {e}")
             
-            wb.Save()
+            # wb.Save()
+
+            # create new filepath to save it in
+            #   temp solution until we figure out why the file cannot be overwritten
+            dirname, filename = os.path.split(self.excelfp_abs)
+            # Split the file name into the name and extension
+            name, ext = os.path.splitext(filename)
+            # Create the new file name by adding the suffix
+            new_filename = f"{name}_formatted{ext}"
+            # Combine the directory and new file name to get the new file path
+            new_filepath = os.path.join(dirname, new_filename)
+
+            wb.SaveAs(new_filepath)
             wb.Close()
             excel.Quit()
-            print(f"Excel file saved and closed successfully at: {self.excelfp_abs}.")
+            # print(f"Excel file saved and closed successfully at: {self.excelfp_abs}.")
+            # print(f"Excel file saved and closed successfully at: {new_filepath}.")
             
         except Exception as e:
             print(f"An error occurred: {e}")
-            wb.Close()
-            excel.Quit()
-            print("Closed the file successfully")
+            # wb.Close()
+            # excel.Quit()
+            # print("Closed the file successfully")
 
 
+    def autofit_openpyxl(self, sheetnames = None):
+        wb = openpyxl.load_workbook(self.excelfp)
 
+        for sheetname in wb.sheetnames:
+            ws = wb[sheetname]
+
+            max_column = ws.max_column
+            max_row = ws.max_row
+            
+            #assert False
+            for col_index in range(1, max_column+1):
+                
+                col_alpha = openpyxl.utils.get_column_letter(col_index)
+
+                max_width = 0
+                for row_index in range(1, max_row+1):
+                    
+                    value = ws.cell(row_index, col_index).value
+                    value2 = "" if value is None else value
+                    
+                    
+                    width = len(str(value2))
+
+                    
+                    # update width
+                    max_width = max(max_width, width)
+                    
+                
+                                
+                    print (col_alpha, col_index, row_index, value, value2, "|", width, max_width)
+                    
+                # adjust
+                adjusted_width = (max_width + 2) * 1.2
+                if adjusted_width < 80:
+                    ws.column_dimensions[col_alpha].width = adjusted_width
+                else:
+                    ws.column_dimensions[col_alpha].width = 80
+                
+                print (col_alpha, adjusted_width)
+                
+                print ("-" * 50)
+            
+    
+        wb.save(self.excelfp)
 
 if __name__ == "__main__":
     
     
     # Testing adjustment for column width
-    if True:
+    if False:
         
         fp = r"./test/file3 - adjust width.xlsx"
         copied_fp = r"./test/file3 - adjust width output.xlsx"
@@ -99,42 +176,17 @@ if __name__ == "__main__":
         self = ColumnsWidthAdjuster(copied_fp)
         self.main(["Data2"])
     
-    assert False, "End of script."
+        assert False, "End of script."
     
     # Non win32 method - KIV only
-    if False:
-        max_column = ws.max_column
-        max_row = ws.max_row
+    if True:
         
-        #assert False
-        for col_index in range(1, max_column+1):
-            
-            col_alpha = utils.get_column_letter(col_index)
+        fp = r"./test/file3 - adjust width.xlsx"
+        copied_fp = r"./test/file3 - adjust width output.xlsx"
 
-            max_width = 0
-            for row_index in range(1, max_row+1):
-                
-                value = ws.cell(row_index, col_index).value
-                value2 = "" if value is None else value
-                
-                
-                width = len(str(value2))
-
-                
-                # update width
-                max_width = max(max_width, width)
-                
-            
-                            
-                print (col_alpha, col_index, row_index, value, value2, "|", width, max_width)
-                
-            # adjust
-            adjusted_width = (max_width + 2) * 1.2
-            ws.column_dimensions[col_alpha].width = adjusted_width
-            
-            print (col_alpha, adjusted_width)
-            
-            print ("-" * 50)
-            
-    
-       
+        # Make a copy of the file
+        wb = openpyxl.open(fp)
+        wb.save(copied_fp)
+        
+        self = ColumnsWidthAdjuster(copied_fp)
+        self.main(["Data2"], method = "openpyxl")

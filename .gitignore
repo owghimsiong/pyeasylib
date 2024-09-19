@@ -1,2 +1,5 @@
 # ignore all .pyc files
 *.pyc
+
+# Personal workspace
+personal_workspace/

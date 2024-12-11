@@ -4,6 +4,86 @@ import shutil
 import pyeasylib
 import re
 
+def convert_xls_to_xlsx_for_folder(input_folder,
+                                   input_file_treatment="keep",
+                                   replace_existing_output=False,
+                                   backup_input_file_ext=".xlsbak",
+                                   deep=False):
+    """
+    Converts all .xls files in a folder to .xlsx format.
+
+    Args:
+        input_folder (str): Path to the folder containing .xls files.
+        input_file_treatment (str, optional): Determines how each 
+            original .xls file is handled after conversion. See 
+            `convert_xls_to_xlsx` for details. Default is "keep".
+        replace_existing_output (bool, optional): If True, allows 
+            overwriting existing .xlsx files. Default is False.
+        backup_input_file_ext (str, optional): Extension to use when 
+            backing up original .xls files. Ignored unless 
+            `input_file_treatment` is "rename_extension". Default is 
+            ".xlsbak".
+        deep (bool, optional): If True, searches for .xls files 
+            recursively in all subdirectories of `input_folder`. 
+            Default is False.
+
+    Returns:
+        list[str]: A list of paths to the newly created .xlsx files.
+
+    Notes:
+        - This wrapper deactivates the `backup_folder` parameter 
+          from `convert_xls_to_xlsx` to simplify processing.
+        - If an error occurs while processing a file, the function 
+          will skip that file and continue with the others.
+
+    Raises:
+        FileNotFoundError: If the specified `input_folder` does not 
+            exist.
+        ValueError: If no .xls files are found in the folder.
+    """
+    
+    # Initialize list for output files
+    output_files = []
+
+    # Ensure the input folder exists
+    if not os.path.isdir(input_folder):
+        raise FileNotFoundError(f"Input folder '{input_folder}' does not exist.")
+
+    # Get the list of .xls files
+    input_files = pyeasylib.get_filepaths_for_folder(input_folder,
+                                                     valid_extensions=[".xls"],
+                                                     deep=deep)
+    
+    # Raise error if no .xls files are found
+    if not input_files:
+        raise ValueError(f"No .xls files found in folder '{input_folder}'.")
+
+    # Process each file
+    num_files = len(input_files)
+    print (f"Converting {num_files} xls files...")
+    for num, input_file in enumerate(input_files, 1):
+        try:
+            output_file = convert_xls_to_xlsx(
+                input_file,
+                input_file_treatment=input_file_treatment,
+                replace_existing_output=replace_existing_output,
+                backup_input_file_ext=backup_input_file_ext,
+                backup_folder=None,  # Hardcoded as per requirements
+            )
+            output_files.append(output_file)
+            print (f"[{num} of {num_files}] Converted {input_file} to {output_file}.")
+        except Exception as e:
+            print(f"Error converting file '{input_file}': {e}")
+            continue
+        
+    # num completed
+    num_success = len(output_files)
+    print (f"Successfully converted {num_success} of {num_files} xls files.")
+
+    return output_files
+
+    
+
 def convert_xls_to_xlsx(input_file,
                         input_file_treatment="keep",
                         replace_existing_output = False,
@@ -177,6 +257,8 @@ def convert_xls_to_xlsx(input_file,
     finally:
         # Quit Excel application
         excel.Quit()
+        
+    return output_file
 
 
 if __name__ == "__main__":
@@ -198,3 +280,19 @@ if __name__ == "__main__":
                             replace_existing_output=replace_existing_output,
                             backup_input_file_ext=backup_input_file_ext, 
                             backup_folder=backup_folder)
+
+    if False:
+        
+        input_folder = r"D:\Desktop\GL"
+        input_file_treatment="rename_extension"
+        replace_existing_output = True
+        backup_input_file_ext="xlsbak"
+    
+        
+        backup_folder = r"./test/out1/out2"
+        convert_xls_to_xlsx_for_folder(input_folder, 
+                            input_file_treatment = input_file_treatment,
+                            replace_existing_output=replace_existing_output,
+                            backup_input_file_ext=backup_input_file_ext,
+                            deep=True)
+                            #backup_folder=backup_folder)

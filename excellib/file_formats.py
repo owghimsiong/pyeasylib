@@ -3,12 +3,15 @@ import os
 import shutil
 import pyeasylib
 import re
+import pandas as pd
+import time
 
 def convert_xls_to_xlsx_for_folder(input_folder,
                                    input_file_treatment="keep",
                                    replace_existing_output=False,
                                    backup_input_file_ext=".xlsbak",
-                                   deep=False):
+                                   deep=False,
+                                   delay=1):
     """
     Converts all .xls files in a folder to .xlsx format.
 
@@ -26,6 +29,7 @@ def convert_xls_to_xlsx_for_folder(input_folder,
         deep (bool, optional): If True, searches for .xls files 
             recursively in all subdirectories of `input_folder`. 
             Default is False.
+        delay (int): Time delay (in seconds) between processing files.
 
     Returns:
         list[str]: A list of paths to the newly created .xlsx files.
@@ -41,9 +45,6 @@ def convert_xls_to_xlsx_for_folder(input_folder,
             exist.
         ValueError: If no .xls files are found in the folder.
     """
-    
-    # Initialize list for output files
-    output_files = []
 
     # Ensure the input folder exists
     if not os.path.isdir(input_folder):
@@ -54,6 +55,11 @@ def convert_xls_to_xlsx_for_folder(input_folder,
                                                      valid_extensions=[".xls"],
                                                      deep=deep)
     
+    # Create a container for output logs
+    output_df = pd.DataFrame(index=pd.Index(input_files, name="Input"),
+                             columns=["Output", "Backup"])
+    
+    
     # Raise error if no .xls files are found
     if not input_files:
         raise ValueError(f"No .xls files found in folder '{input_folder}'.")
@@ -63,24 +69,32 @@ def convert_xls_to_xlsx_for_folder(input_folder,
     print (f"Converting {num_files} xls files...")
     for num, input_file in enumerate(input_files, 1):
         try:
-            output_file = convert_xls_to_xlsx(
+            output_file, backup_file = convert_xls_to_xlsx(
                 input_file,
                 input_file_treatment=input_file_treatment,
                 replace_existing_output=replace_existing_output,
                 backup_input_file_ext=backup_input_file_ext,
                 backup_folder=None,  # Hardcoded as per requirements
             )
-            output_files.append(output_file)
+            output_df.at[input_file, "Output"] = output_file
+            output_df.at[input_file, "Backup"] = backup_file
             print (f"[{num} of {num_files}] Converted {input_file} to {output_file}.")
+            time.sleep(delay)
         except Exception as e:
             print(f"Error converting file '{input_file}': {e}")
-            continue
+        finally:
+            # Explicitly quit Excel application after each file
+            excel = win32.gencache.EnsureDispatch('Excel.Application')
+            excel.Quit()
         
+        # Optional delay between files
+        time.sleep(delay)
+            
     # num completed
-    num_success = len(output_files)
+    num_success = output_df["Output"].dropna().shape[0]
     print (f"Successfully converted {num_success} of {num_files} xls files.")
 
-    return output_files
+    return output_df
 
     
 
@@ -128,6 +142,7 @@ def convert_xls_to_xlsx(input_file,
 
     Returns:
         str: The absolute path of the newly created .xlsx file.
+        str: The absolute path of the backup file
 
     Notes:
         - This function uses the `win32com` library to interact with 
@@ -161,7 +176,9 @@ def convert_xls_to_xlsx(input_file,
     input_filedir, input_filename = os.path.split(input_file)
     
     # Ensure backup ext starts with .
-    if not backup_input_file_ext.startswith("."):
+    if backup_input_file_ext.startswith("."):
+        backup_input_file_ext = re.subn("\.{1,}", ".", backup_input_file_ext)[0]
+    else:
         backup_input_file_ext = "." + backup_input_file_ext
         
     # Check input file treatment
@@ -183,7 +200,6 @@ def convert_xls_to_xlsx(input_file,
     
     # Generate output file path by replacing .xls with .xlsx
     output_file = re.sub(".xls$", ".xlsx", input_file, flags=re.IGNORECASE) #$ end of string
-    
     
     # Check if output file is already present
     if os.path.exists(output_file):
@@ -208,6 +224,8 @@ def convert_xls_to_xlsx(input_file,
     excel = win32.gencache.EnsureDispatch('Excel.Application')
     excel.Visible = False  # Keep Excel hidden during conversion
     
+    #
+    backup_file = None
     try:
         # Open the .xls file
         workbook = excel.Workbooks.Open(input_file)
@@ -218,11 +236,11 @@ def convert_xls_to_xlsx(input_file,
         
         # Handle original file based on backup_original parameter
         if input_file_treatment == "keep":
-            
+            backup_file = "NA"            
             pass
         
         elif input_file_treatment == "delete":
-            
+            backup_file = "Deleted"
             os.remove(input_file)
         
         elif input_file_treatment == "rename_extension":
@@ -258,7 +276,7 @@ def convert_xls_to_xlsx(input_file,
         # Quit Excel application
         excel.Quit()
         
-    return output_file
+    return output_file, backup_file
 
 
 if __name__ == "__main__":
@@ -281,18 +299,20 @@ if __name__ == "__main__":
                             backup_input_file_ext=backup_input_file_ext, 
                             backup_folder=backup_folder)
 
+
+    # Test folder
     if False:
         
-        input_folder = r"D:\Desktop\GL"
+        input_folder = "PLEASE SPECIFY FOLDER"
         input_file_treatment="rename_extension"
         replace_existing_output = True
-        backup_input_file_ext="xlsbak"
-    
+        deep = True
+        backup_input_file_ext="...xlsla"
+        delay=1
         
-        backup_folder = r"./test/out1/out2"
-        convert_xls_to_xlsx_for_folder(input_folder, 
+        output = convert_xls_to_xlsx_for_folder(input_folder, 
                             input_file_treatment = input_file_treatment,
                             replace_existing_output=replace_existing_output,
                             backup_input_file_ext=backup_input_file_ext,
-                            deep=True)
-                            #backup_folder=backup_folder)
+                            deep=deep,
+                            delay=delay)

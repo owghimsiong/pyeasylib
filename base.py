@@ -552,10 +552,35 @@ def strip_if_possible(v):
         return v
 
 def natural_sort(l): 
-    #Source: https://stackoverflow.com/questions/4836710/is-there-a-built-in-function-for-string-natural-sort
-    convert = lambda text: int(text) if text.isdigit() else text.lower()
-    alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
+    """
+    Sorts a list of strings in natural order, taking into account 
+    both alphabetic and numeric parts, including negative numbers.
+
+    Strings are split into segments of numbers and text. Numbers 
+    are converted to integers (including negatives), while text is 
+    compared case-insensitively.
+
+    Parameters:
+        l (list of str): List of strings to be sorted.
+
+    Returns:
+        list of str: The input list sorted in natural order.
+
+    Examples:
+        >>> l = ["file-2.txt", "file10.txt", "file1.txt", 
+                 "File-11.txt", "file-10.txt"]
+        >>> fn(l)
+        ['File-11.txt', 'file-10.txt', 'file-2.txt', 
+         'file1.txt', 'file10.txt']
+    """
+    
+    convert = lambda text: int(text) if re.match(r'^-?\d+$', text) else text.lower()
+    alphanum_key = lambda key: [convert(c) for c in re.split('([+-]?\d+)', key)]
+    
     return sorted(l, key=alphanum_key)
+
+
+
     
 
 class InputParameters:

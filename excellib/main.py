@@ -409,7 +409,74 @@ def copy_worksheet(source_ws, target_wb, new_ws_title=None):
     # Return
     return target_ws
 
+def df_to_worksheet(df, ws, 
+                    index=True, header=True,
+                    startrow=1, startcol=1
+                    ):
+    '''
+    This function writes a dataframe to an openpyxl worksheet.
+    
+    This is analogous to the pd.DataFrame.to_excel, which takes
+    in a pandas ExcelWriter rather than a worksheet directly.
+    
+    Inputs:
+        - df: A pandas dataframe
+        - ws: An openpyxl worksheet object
+        - index: bool (default True) - write the index
+        - header: bool (default True) - write the header
+        - startrow: default (1) - base 1 index where 1 = first row
+        - startcol: default (1) - base 1 index where 1 = column A
+    
+    -----------------------------------------------------------
+    # Sample usage
+    > wb = openpyxl.Workbook()
+    > ws = wb.create_sheet()
+    
+    > df = pd.DataFrame([[1,2,3], [4,5,6], [7,8,9]], index=list("ABC"),
+                      columns=["C1", "C2", "C3"])
+        
+    > df_to_worksheet(df, ws, index=False, header=False,
+                    startrow=3, startcol=3)
+    
+    >wb.save("test to worksheet.xlsx")
+    
+    ----------------------------------------------------------
+    
+    CHANGELOGS:
+    20200817 - initialised by owgs
+    '''
 
+    # Prepare the dataframe based on whether need to write index or header
+    #    
+    if index is True:
+        df = df.reset_index()
+        
+    if header is True:
+        df = df.T.reset_index().T
+    
+    # Get the number of rows and columns to write
+    num_rows, num_cols = df.shape
+    
+    # Set the start row and cols
+    for r_offset in range(num_rows):
+        
+        ridx = startrow + r_offset
+        
+        for c_offset in range(num_cols):
+            
+            value = df.iat[r_offset, c_offset]
+    
+            # Get the cell
+            cidx = startcol + c_offset
+            c_alpha = utils.get_column_letter(cidx)
+            cell = "%s%s" % (c_alpha, ridx)
+            
+            # Set the value
+            ws[cell] = value
+    
+    # end of function
+    
+    
 if __name__ == "__main__":
     
     # TESTER for copy_worksheet

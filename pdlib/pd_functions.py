@@ -129,7 +129,7 @@ def get_expected_data_row_locations(df0, expected_data, return_index=True):
             iloc_list.append(i)
     
     # Raise error if cannot find header row
-    if len(iloc_list) is 0:
+    if len(iloc_list) == 0:
         error = (
             "Unable to identify data row in file. "
             f"Data row must contain the following values: {expected_data_set}."
@@ -146,7 +146,8 @@ def get_expected_data_row_locations(df0, expected_data, return_index=True):
 
     
 def get_main_table_from_df(df0, expected_header_columns,
-                           return_only_expected_header_columns = False):
+                           return_only_expected_header_columns = False,
+                           drop_null_rows_for_header_columns = True):
     '''
     Extract a main data table from the raw data loaded as dataframe.
     
@@ -188,7 +189,8 @@ def get_main_table_from_df(df0, expected_header_columns,
     
     # Drop NA because sometimes there will be s/n entries although no 
     # actual data
-    df = df.dropna(subset = expected_header_columns, how='all')
+    if drop_null_rows_for_header_columns:
+        df = df.dropna(subset = expected_header_columns, how='all')
 
     # keep only required columns
     if return_only_expected_header_columns:

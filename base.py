@@ -43,56 +43,42 @@ NUMERICTYPES = FLOATTYPES.union(INTTYPES)
 
 
 
-            
 
-def get_filepaths_for_folder(input_folder, valid_extensions = [],
-                             deep = False):
-    '''
-    Returns a list of excel filepaths.
-    
-    valid_extensions = a list, or EXTENSIONS_EXCEL
-    
-    if deep = True, will go down into internal folders to extract.
-    '''
-    
-    # normalise the valid extensions to lower case and add a dot in front
-    valid_extensions = [i.lower() for i in valid_extensions]
-    valid_extensions = [i if i.startswith(".") else ".%s" % i
-                        for i in valid_extensions]
-    
-    # Get the dir entries 
-    entries =  os.listdir(input_folder)
-            
-    # Get the files
-    filenames = [f for f in entries 
-                 if os.path.isfile(os.path.join(input_folder, f))]
-    dirnames = [f for f in entries if f not in filenames]
-        
-    # Get only excel files and not folders and skip temp files
-    
-    filenames = [f 
-                 for f in filenames
-                 if (not(f.startswith("~")) and 
-                     os.path.splitext(f)[-1].lower() in valid_extensions)] 
-    
-    # calculate the filepaths
-    filepaths = [os.path.join(input_folder, fn) for fn in filenames]
-    
-    # Get for the folder
-    if deep and len(dirnames) > 0:
-        
-        for dirname in dirnames:
-            dirpath = os.path.join(input_folder, dirname)
-            filepaths2 = get_filepaths_for_folder(
-                dirpath,
-                valid_extensions=valid_extensions,
-                deep = deep)
-            
-            # update
-            filepaths.extend(filepaths2)
-                
-    return sorted(list(set(filepaths)))
 
+def compare_two_sets(list1, list2, verbose=True):
+    '''
+    Compare 2 lists.
+
+    Input:
+        list1 - list/set
+        list2 - list/set
+
+    Output:
+        tuple with three elements:
+        1) values in both list
+        2) values in list1 but not in list2
+        3) values in list2 but not in list1
+
+    Usage:
+        >>> compare2sets([1,2,3,4], [3,4,5,6])
+        ([3, 4], [1, 2], [5, 6])
+    '''
+    set1 = set(list1)
+    set2 = set(list2)
+    overlap_set = set1.intersection(set2)
+    not_in_set2 = set1.difference(overlap_set)
+    not_in_set1 = set2.difference(overlap_set)
+    
+    if verbose:
+        log = (
+            f"left_only:{len(not_in_set2)} (common:{len(overlap_set)}) right_only:{len(not_in_set1)}"
+            )
+        print (log)
+        
+    
+    return list(overlap_set), list(not_in_set2), list(not_in_set1)
+
+            
 
 def create_folder(folderpath,
                   alternate_if_exists = False):
@@ -566,10 +552,35 @@ def strip_if_possible(v):
         return v
 
 def natural_sort(l): 
-    #Source: https://stackoverflow.com/questions/4836710/is-there-a-built-in-function-for-string-natural-sort
-    convert = lambda text: int(text) if text.isdigit() else text.lower()
-    alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
+    """
+    Sorts a list of strings in natural order, taking into account 
+    both alphabetic and numeric parts, including negative numbers.
+
+    Strings are split into segments of numbers and text. Numbers 
+    are converted to integers (including negatives), while text is 
+    compared case-insensitively.
+
+    Parameters:
+        l (list of str): List of strings to be sorted.
+
+    Returns:
+        list of str: The input list sorted in natural order.
+
+    Examples:
+        >>> l = ["file-2.txt", "file10.txt", "file1.txt", 
+                 "File-11.txt", "file-10.txt"]
+        >>> fn(l)
+        ['File-11.txt', 'file-10.txt', 'file-2.txt', 
+         'file1.txt', 'file10.txt']
+    """
+    
+    convert = lambda text: int(text) if re.match(r'^-?\d+$', text) else text.lower()
+    alphanum_key = lambda key: [convert(c) for c in re.split('([+-]?\d+)', key)]
+    
     return sorted(l, key=alphanum_key)
+
+
+
     
 
 class InputParameters:
@@ -609,12 +620,166 @@ class InputParameters:
         
         # Save for each inputs
         for k, v in cols.items():
+            
+            # raise warning if k alr present and v is not same
+            v0 = getattr(self, k, None)
+            
+            if hasattr(self, k) and (v0 != v):
+                msg = (
+                    f"WARNING: Value for attribute '{k}' already found: "
+                    f"Updated from '{v0}' to '{v}'."
+                    )
+                print (msg)
+            
             setattr(self, k, v)
             self.SUMMARY.at[k, self.varvalue] = v
     
 
+
+class ProgressBar:
     
+    def __init__(self, number, bins = 10):
+        
+        # Calculate pct size per bin
+        size = int(100 / bins)
+        
+        # Get the intervals
+        # start from 2, so that we don't have to print 0%
+        pct_intervals = list(range(0, 101, size))
+        
+        #
+        ndigits = len(str(number))
+        
+        # Set the dict
+        count_dict = {}
+        for pct in pct_intervals:
+            count = int(round(pct / 100 * number, 0))
+            count_dict[count] = f"{count:{ndigits}d} of {number} completed: {pct}%"
+        
+        self.count_dict = count_dict
+        self.count_time = {0: time.perf_counter()}
+        self.number = number
+        self.bins = bins
+        
+    def _get_log_message(self, count):
+        
+        msg = self.count_dict.get(count, None)
+        if msg is not None:
+            
+            self.count_time[count] = time.perf_counter()
+
+            # time taken so far
+            time_elapsed = self.count_time[count] - self.count_time[0]
+            time_elapsed_per_loop = time_elapsed / (count - 0)
+            time_elapsed_str = str(dt.timedelta(seconds=round(time_elapsed, 0)))
+            
+            if count != self.number:
+                
+                # number of loops remaining
+                num_remain = self.number - count
+                time_remain = round(num_remain * time_elapsed_per_loop, 0)
+                time_remain = str(dt.timedelta(seconds=time_remain))
+                
+                msg += f" [Elapsed: {time_elapsed_str} hr | Remaining: {time_remain} hr]"
+                
+            else:
+                
+                msg += f" [Elapsed: {time_elapsed_str} hr]"
+                            
+        return msg
+    
+    def print_log_message(self, count):
+        
+        msg = self._get_log_message(count)
+        if msg is not None:
+            print (msg)
+    
+    
+class Binner:
+    '''
+    A class that splits data into bins.     
+    '''
+    
+    def __init__(self, data, nbins):
+        
+        # Create a df
+        df = pd.DataFrame({"Data": list(data)})
+        df.index = range(1, df.shape[0]+1)
+        
+        # Number per bin
+        num_per_bin = int(np.ceil(df.shape[0] / nbins))
+        
+        # Split into bins
+        df["Bin"] = None
+        for bin_num in range(nbins):
+            
+            l_idx = bin_num * num_per_bin
+            r_idx = (bin_num+1) * num_per_bin
+            
+            if bin_num > 0:
+                l_idx += 1
+                
+            df.loc[l_idx:r_idx, "Bin"] = bin_num+1
+            
+        gb = df.groupby("Bin")
+        
+        # Save as attrs
+        self.data = data
+        self.nbins = nbins
+        self.bins = list(gb.groups.keys())
+        self.df = df
+        self.gb = gb
+        
+    def __repr__(self):
+        
+        header = f"CLASS: {self.__class__.__name__}"
+        s = (header + \
+             "\n"
+             f"{'-'*len(header)}"
+             f"\n"
+             f"Number of data: {self.df.shape[0]}\n"
+             f"Number of bins: input={self.nbins}, actual={len(self.bins)}\n"
+             f"Number of data by bins:\n"
+             f"{self.gb.agg('count')}"
+             )
+            
+        return s
+        
+    def get_data_by_bin(self, bin_number):
+        
+        if bin_number not in self.gb.groups:
+            
+            raise Exception (f"Bin={bin_number} not found. "
+                             f"Max={max(self.gb.groups.keys())}")
+        
+        bin_data = self.gb.get_group(bin_number)["Data"].values.tolist()
+        
+        return bin_data
+
+
 if __name__ == "__main__":
     
     # prettify_bin_labels
-    self = InputParameters(a = 1, b = 2)
+    if False:
+        self = InputParameters(a = 1, b = 2)
+        
+    
+    # Test ProgressBar
+    if False:
+        
+        pbar = ProgressBar(100, 10)
+        
+        for i in range(1, 101):
+            time.sleep(0.1)
+            pbar.print_log_message(i)
+            
+    # Test binner
+    if True:
+        
+        data = list(range(22))
+        
+        self = Binner(data, 3)
+        
+        print (self.gb.agg("count"))
+        
+            

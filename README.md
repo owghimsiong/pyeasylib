@@ -1,16 +1,11 @@
 # pyeasylib
 ## _Simplifies common Python tasks_
 
-pyeasylib is a simple Python package that simplifies tasks commonly
-implemented in Python. 
+# Welcome to pyeasylib!
 
-## ✨ Features ✨
+Hello World! This package was initially created to help myself perform certain standard procedures without the need to retype the same codes over and over again. Although the codes are simple, it can be a chore to always have to retype it, even if they are relatively routine (e.g. checking filetypes, ensuring that only one match is found - not more and not less, connecting to databases, etc.).
 
-- Rather than repeatedly typing lines and lines of Python codes to implement a task, you can easily do those with just a few lines of code using pyeasylib.
-o sss
+Methods are added as and when it can be generalised meaningfully and assessed to be useful for other projects.
 
 
-
-
-Created using [Dillinger](https://dillinger.io/).
-
+Created using: https://stackedit.io/app#

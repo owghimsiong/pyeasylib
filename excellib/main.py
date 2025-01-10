@@ -129,7 +129,7 @@ class CellRangeIterator:
         '''
         
         # Split to extract the alpha and digit
-        reg_exp = '\D+|\d+'
+        reg_exp = r'\D+|\d+'
         extracted = re.findall(reg_exp, anchor)
         num_extracted = len(extracted)
         

@@ -13,4 +13,4 @@ sqlalchemy>=2.0.21
 sql_metadata>=2.10.0
 
 # To install
-bash/cmd:> pip install -r requirements.txt
+# bash/cmd:> pip install -r requirements.txt

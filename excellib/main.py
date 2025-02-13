@@ -8,6 +8,8 @@ Wrapper functions for the openpyxl library.
 # Import dependencies from py standard libs
 import re
 
+import os
+
 import pandas as pd
 
 from copy import copy
@@ -15,7 +17,10 @@ from copy import copy
 # Import dependencies from openpyxl
 import openpyxl
 from openpyxl.styles import PatternFill, Border, Side, Alignment, Protection, Font
+from openpyxl.comments import Comment
 utils = openpyxl.utils
+
+import pyeasylib
 
 # Start of class
 
@@ -116,10 +121,8 @@ class CellRangeIterator:
         
         for cell in self.iterate_over_range():
             
-            for cell_attr, cell_attr_val in cell_attribute_dict.items():
-                
-                setattr(cell, cell_attr, cell_attr_val)
-        
+            apply_cell_format(cell, cell_attribute_dict)
+            
         
     def __split_anchor__(self, anchor):
         '''
@@ -325,6 +328,26 @@ def read_ws(ws, drop_na_rows = False, drop_na_cols = False):
     return df
 
 
+def get_cell_format(
+    cell,
+    attrnames = ["value", "font", "fill", "number_format", 
+                 "alignment", "border", "comment", 
+                 "hyperlink", "number_format", "protection"]):
+    
+    cell_format = {
+        attrname: copy(getattr(cell, attrname))
+        for attrname in attrnames
+        }
+    
+    return cell_format
+
+def apply_cell_format(
+    cell, 
+    cell_format):
+    
+    for cell_attr, cell_attr_val in cell_format.items():
+        setattr(cell, cell_attr, cell_attr_val)
+            
 def copy_worksheet(source_ws, target_wb, new_ws_title=None):
     '''
     Copy a worksheet to a separate target workbook.
@@ -476,6 +499,99 @@ def df_to_worksheet(df, ws,
     
     # end of function
     
+def df_to_ws_preserving_template_column_order(
+        ws, df, expected_template_headers,
+        write_remaining_df_columns=True,
+        additional_column_font = Font(italic=True) ,
+        additional_column_comment_author = os.getlogin(),
+        ):
+    """
+    Writes a DataFrame to an Excel worksheet while preserving the 
+    template column order.
+    
+    This function reads the specified worksheet, identifies the 
+    expected header row, and reorders the input DataFrame (`df`) to 
+    match the column order in the worksheet template. Any additional 
+    columns in `df` not present in the template are appended to the 
+    end. The reordered DataFrame is then written to the worksheet, 
+    starting from the row after the identified header.
+    
+    For consistency, the df index will not be saved to the output.
+    If you wish to save the index, please reset the index so that 
+    it is in the df itself, before passing it to this method.
+    
+    Args:
+        sheetname (str): Name of the worksheet to write data to.
+        df (pd.DataFrame): DataFrame containing data to be written.
+        expected_headers (list of str): Expected headers to locate 
+            the header row.
+        write_remaining_df_columns (bool): True -> write all other columns
+                                               even if not in template
+                                       False -> do not write if not in
+                                                template
+    
+    Process:
+        1. Reads the worksheet into a DataFrame (`wsdf`).
+        2. Identifies the header row using `expected_headers`.
+        3. Extracts column order from the worksheet template.
+        4. Reorders `df` columns and appends extra columns if needed.
+        5. Determines the starting row for writing data.
+        6. Writes the reordered DataFrame to the worksheet.
+    
+    Dependencies:
+        - `pyeasylib.excellib.read_ws()`: Reads an Excel worksheet.
+        - `pyeasylib.pdlib.get_expected_data_row_locations()`: Finds 
+          the header row index.
+        - `pyeasylib.assert_one_and_get()`: Ensures a single header.
+        - `pyeasylib.excellib.df_to_worksheet()`: Writes data to a 
+          worksheet.
+    
+    Returns:
+        None (modifies the worksheet in place).
+    """
+
+    # Get the worksheet and read the contents
+    wsdf = read_ws(ws)
+    
+    # Get the expected header row
+    expected_header_row_locs = pyeasylib.pdlib.get_expected_data_row_locations(
+        wsdf, expected_template_headers, return_index=True)
+    header_row = pyeasylib.assert_one_and_get(
+        expected_header_row_locs, what="header row")
+    
+    # header in the ws template
+    template_header_cols = wsdf.loc[header_row].tolist()
+    
+    # Sort the input data first by header
+    df_col_ordered = df.reindex(columns=template_header_cols, fill_value="")
+    
+    # Then i fill in the rest of the data from the input
+    if write_remaining_df_columns:
+        other_cols = [c for c in df.columns if c not in template_header_cols]
+        if len(other_cols) > 0:
+            df_col_ordered = pd.concat(
+                [df_col_ordered, df[other_cols]], axis=1)
+            
+            # will need to write the header
+            # Determine the start column index for new headers
+            start_col = len(template_header_cols) + 1  # 1-based index
+    
+            # Write the headers for the new columns in the worksheet
+            for col_idx, col_name in enumerate(other_cols, start=start_col):
+                cell = ws.cell(row=header_row, column=col_idx, value=col_name)
+                cell.font = additional_column_font
+                cell.comment = Comment("Additional column", 
+                                       additional_column_comment_author)
+                
+    # Then get the next row
+    startrow = header_row + 1
+    
+    # Start to write
+    df_to_worksheet(
+        df_col_ordered, ws, 
+        index=False, header=False, startrow=startrow, startcol=1)
+    
+    return None
     
 if __name__ == "__main__":
     

@@ -1,6 +1,6 @@
 # Version
-__version__ = "2.0"
-__version_date__ = "10 Jan 2025"
+__version__ = "2.1"
+__version_date__ = "20 Feb 2025"
 
 from pyeasylib.base import *
 from pyeasylib.base_datetime import *

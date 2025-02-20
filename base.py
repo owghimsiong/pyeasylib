@@ -143,7 +143,7 @@ def create_folder(folderpath,
             return folderpath
         
 def create_folder_for_filepath(filepath):
-    '''
+    r'''
     Create folders for a filepath.
     
     Sometimes when we are saving a file to C:\A\B\C\out.txt, there
@@ -575,7 +575,7 @@ def natural_sort(l):
     """
     
     convert = lambda text: int(text) if re.match(r'^-?\d+$', text) else text.lower()
-    alphanum_key = lambda key: [convert(c) for c in re.split('([+-]?\d+)', key)]
+    alphanum_key = lambda key: [convert(c) for c in re.split(r'([+-]?\d+)', key)]
     
     return sorted(l, key=alphanum_key)
 

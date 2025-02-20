@@ -106,7 +106,7 @@ def ensure_correct_date_format(date_series, date_format = 'dmy',
         else:
             yr_mth_day_df = \
                 unique_date_series.str.split(delimiter, expand = True)
-            yr_mth_day_df[2] = yr_mth_day_df[2].str.extract('^(\d{1,4})')
+            yr_mth_day_df[2] = yr_mth_day_df[2].str.extract(r'^(\d{1,4})')
                 
         if date_format.strip().lower() == 'ymd':
             yr_mth_day_df.rename(columns = {0:'yr', 1:'mth', 2:'day'},

@@ -326,11 +326,89 @@ def validate_columns_exist(df, columns, optional = False):
         # raise
         raise LookupError (err)
 
+
+def sort_dataframe_by_custom_order(df, sort_orders, ascending=True):
+    """
+    Sort a DataFrame by multiple columns with custom external orders.
+    Unsorted values retain their original names and are placed at the beginning or end, depending on the ascending flag.
+    
+    Args:
+        df (pd.DataFrame): The DataFrame to sort.
+        sort_orders (dict): A dictionary where keys are column names and values are lists specifying the custom order.
+        ascending (bool or list of bool): A single bool or a list of bools specifying the sorting direction for each column.
+    
+    Returns:
+        pd.DataFrame: The sorted DataFrame.
+        
+    To do:
+        might bring over to pyeasylib
+    """
+    
+    # nrow1
+    nrow1 = df.shape[0]
+    
+    # If ascending is a single bool, apply it to all keys in sort_orders
+    if isinstance(ascending, bool):
+        ascending = [ascending] * len(sort_orders)
+
+    # Adjust sorting for each column
+    for i, (column, order) in enumerate(sort_orders.items()):
+        # Get unsorted values (not in the custom order)
+        unsorted_values = df.loc[~df[column].isin(order), column].unique()
+        
+        # Build the complete order, placing unsorted values at the start or end
+        if ascending[i]:
+            complete_order = order + list(unsorted_values)
+        else:
+            complete_order = list(unsorted_values) + order
+        
+        # Convert the column to categorical with the complete order
+        df[column] = pd.Categorical(df[column], categories=complete_order, ordered=True)
+
+    # Sort by the specified columns
+    sorted_df = df.sort_values(list(sort_orders.keys()), ascending=ascending)
+    
+    # 
+    nrow2 = sorted_df.shape[0]
+    
+    #
+    if nrow1 != nrow2:
+        raise Exception ("Mismatched input and output lengths.")
+        
+    return sorted_df
+
+
+
     
 if __name__ == "__main__":
     
-    # TESTER for get_value_location
-    df0 = pd.DataFrame(
-        [[1,2,3], [4,4, 6], [6,3,1]],
-        index = [0,1,2],
-        columns = [0,1,2])
+    if False:
+        # TESTER for get_value_location
+        df0 = pd.DataFrame(
+            [[1,2,3], [4,4, 6], [6,3,1]],
+            index = [0,1,2],
+            columns = [0,1,2])
+        
+    if True:
+        # Tester for external sorter
+
+        data = {
+            "Name": ["Alice", "Bob", "Charlie", "David", "Eve", "Frank", "ABC", "XYZ"],
+            "Department": ["HR", "IT", "Finance", "HR", "Finance", "IT", "Common", "Common"],
+            "Region": ["East", "West", "North", "East", "South", "North", "East", "West"]
+        }
+        df = pd.DataFrame(data)
+        
+        # Custom orders for sorting
+        sort_orders = {
+            "Department": ["Finance", "HR", "IT"],  # Custom order for 'Department'
+            "Region": ["North", "South", "East", "West"]  # Custom order for 'Region'
+        }
+        
+        # Apply ascending=True to all keys
+        sorted_df_asc = sort_dataframe_by_custom_order(df, sort_orders, ascending=True)
+        print("Sorted with ascending=True:\n", sorted_df_asc)
+        
+        # Apply ascending=False to all keys
+        sorted_df_desc = sort_dataframe_by_custom_order(df, sort_orders, ascending=False)
+        print("\nSorted with ascending=False:\n", sorted_df_desc)
